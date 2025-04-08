@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 import '../models/listin.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -9,10 +11,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List<Listin> listListins = [
-    Listin(id: "L001", name: "Feira de Outubro"),
-    Listin(id: "L002", name: "Feira de Novembro"),
-  ];
+  final List<Listin> listListins = [];
+  // Instancia do firebase para acessar o banco de dados
+  FirebaseFirestore db = FirebaseFirestore.instance;
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +101,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   ElevatedButton(
                       onPressed: () {
-                        //TODO: Implementar adição
+                        //Puxando o NameController para pegar o texto que o usuario digitou
+                        //usando a biblioteca UUID para gerar um ID unico
+                        //Comando utilizado para instalar a biblioteca UUID (flutter pub add uuid)
+                        Listin listin =
+                            Listin(id: Uuid().v1(), name: nameController.text);
+                        //criando uma coleção chamada listin no bd, com o id gerado e o nome que o usuario digita
+                        // O set sobreescreve o documento ou escreve um novo caso não exista
+                        db
+                            .collection("listins")
+                            .doc(listin.id)
+                            .set(listin.toMap());
+
+                        Navigator.pop(context);
                       },
                       child: Text(confirmationButton)),
                 ],
