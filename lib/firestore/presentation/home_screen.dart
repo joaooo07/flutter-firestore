@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_firebase_firestore_first/firestore/presentation/analitys.dart';
 import 'package:uuid/uuid.dart';
 import '../models/listin.dart';
 
@@ -11,9 +12,17 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List<Listin> listListins = [];
+  List<Listin> listListins = [];
   // Instancia do firebase para acessar o banco de dados
   FirebaseFirestore db = FirebaseFirestore.instance;
+  Analitys analitys = Analitys();
+
+  @override
+  void initState() {
+    analitys.incrementarAcessoTotal();
+    refresh();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,17 +44,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: TextStyle(fontSize: 18),
               ),
             )
-          : ListView(
-              children: List.generate(
-                listListins.length,
-                (index) {
-                  Listin model = listListins[index];
-                  return ListTile(
-                    leading: const Icon(Icons.list_alt_rounded),
-                    title: Text(model.name),
-                    subtitle: Text(model.id),
-                  );
-                },
+          : RefreshIndicator(
+              onRefresh: () {
+                analitys.incrementarAtualizacaoManual();
+                return refresh();
+              },
+              child: ListView(
+                children: List.generate(
+                  listListins.length,
+                  (index) {
+                    Listin model = listListins[index];
+                    return ListTile(
+                      leading: const Icon(Icons.list_alt_rounded),
+                      title: Text(model.name),
+                      subtitle: Text(model.id),
+                    );
+                  },
+                ),
               ),
             ),
     );
@@ -113,6 +128,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             .doc(listin.id)
                             .set(listin.toMap());
 
+                        analitys.incrementarListaAdd();
+
+                        refresh();
+
                         Navigator.pop(context);
                       },
                       child: Text(confirmationButton)),
@@ -123,5 +142,32 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
     );
+  }
+
+  refresh() async {
+    List<Listin> temp = [];
+    //Mostrando na tela as informações que estão no banco de dados
+    //QuerySnapshot é como tirar uma foto do banco de dados, ou seja,
+    //ele pega os dados que estão lá no momento
+    // Adicionando os dados do banco de dados na lista listListins
+    QuerySnapshot<Map<String, dynamic>> snapshot =
+        await db.collection("listins").get();
+
+    for (var doc in snapshot.docs) {
+      //criando uma lista temporaria para armazenar as informações e depois adicionar na lista listListins
+      temp.add(Listin.fromMap(doc.data()));
+    }
+    setState(() {
+      listListins = temp;
+    });
+
+    // //Puxando a coleção listin do banco de dados e transformando em uma lista de Listin
+    // db.collection("listins").snapshots().listen((snapshot) {
+    //   listListins.clear();
+    //   for (var doc in snapshot.docs) {
+    //     listListins.add(Listin.fromMap(doc.data()));
+    //   }
+    //   setState(() {});
+    // });
   }
 }
